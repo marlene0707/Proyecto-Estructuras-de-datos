@@ -1,0 +1,34 @@
+import java.util.Stack;
+
+public class PilaAcciones {
+
+    private final Stack<Runnable> acciones = new Stack<>();
+
+    public void push(Runnable accion) {
+
+        if (accion != null) {
+            acciones.push(accion);
+        }
+    }
+
+    public Runnable pop() {
+
+        if (acciones.isEmpty()) {
+            return null;
+        }
+
+        return acciones.pop();
+    }
+
+    public boolean estaVacia() {
+        return acciones.isEmpty();
+    }
+
+    public int tamano() {
+        return acciones.size();
+    }
+
+    public void limpiar() {
+        acciones.clear();
+    }
+}
