@@ -1,0 +1,51 @@
+import java.util.List;
+
+public class GestorDescuentos {
+
+    private final MaxHeapDescuentos ofertas =
+            new MaxHeapDescuentos();
+
+    public void actualizarOfertas(List<Alimento> alimentos) {
+
+        ofertas.limpiar();
+
+        for (Alimento alimento : alimentos) {
+            if (tieneOferta(alimento)) {
+                ofertas.insertar(alimento);
+            }
+        }
+    }
+
+    public boolean tieneOferta(Alimento alimento) {
+
+        return alimento != null
+                && !alimento.estaCaducado()
+                && alimento.calcularDescuento() > 0;
+    }
+
+    public int obtenerDescuento(Alimento alimento) {
+
+        return alimento.calcularDescuento();
+    }
+
+    public double obtenerPrecioFinal(Alimento alimento) {
+
+        return alimento.calcularPrecioFinal();
+    }
+
+    public Alimento obtenerMejorOferta() {
+
+        return ofertas.obtenerMayorDescuento();
+    }
+
+    public List<Alimento> obtenerOfertasOrdenadas() {
+
+        return ofertas.obtenerOrdenados();
+    }
+
+    public int cantidadOfertas() {
+
+        return ofertas.tamano();
+    }
+}
+
