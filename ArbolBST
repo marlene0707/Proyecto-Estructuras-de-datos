@@ -1,0 +1,141 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class ArbolBST {
+
+    private class Nodo {
+        Alimento alimento;
+        Nodo izquierda;
+        Nodo derecha;
+
+        Nodo(Alimento alimento) {
+            this.alimento = alimento;
+        }
+    }
+
+    private Nodo raiz;
+
+    public void insertar(Alimento alimento) {
+        raiz = insertarRec(raiz, alimento);
+    }
+
+    private Nodo insertarRec(Nodo actual, Alimento alimento) {
+
+        if (actual == null) {
+            return new Nodo(alimento);
+        }
+
+        int comparacion = alimento.getNombre()
+                .compareToIgnoreCase(actual.alimento.getNombre());
+
+        if (comparacion < 0) {
+            actual.izquierda = insertarRec(actual.izquierda, alimento);
+        } else if (comparacion > 0) {
+            actual.derecha = insertarRec(actual.derecha, alimento);
+        } else {
+            actual.alimento = alimento;
+        }
+
+        return actual;
+    }
+
+    public Alimento buscar(String nombre) {
+        return buscarRec(raiz, nombre);
+    }
+
+    private Alimento buscarRec(Nodo actual, String nombre) {
+
+        if (actual == null) {
+            return null;
+        }
+
+        int comparacion = nombre.compareToIgnoreCase(
+                actual.alimento.getNombre());
+
+        if (comparacion == 0) {
+            return actual.alimento;
+        }
+
+        if (comparacion < 0) {
+            return buscarRec(actual.izquierda, nombre);
+        }
+
+        return buscarRec(actual.derecha, nombre);
+    }
+
+    public void eliminar(String nombre) {
+        raiz = eliminarRec(raiz, nombre);
+    }
+
+    private Nodo eliminarRec(Nodo actual, String nombre) {
+
+        if (actual == null) {
+            return null;
+        }
+
+        int comparacion = nombre.compareToIgnoreCase(
+                actual.alimento.getNombre());
+
+        if (comparacion < 0) {
+            actual.izquierda = eliminarRec(actual.izquierda, nombre);
+
+        } else if (comparacion > 0) {
+            actual.derecha = eliminarRec(actual.derecha, nombre);
+
+        } else {
+
+            if (actual.izquierda == null) {
+                return actual.derecha;
+            }
+
+            if (actual.derecha == null) {
+                return actual.izquierda;
+            }
+
+            Nodo sucesor = minimo(actual.derecha);
+
+            actual.alimento = sucesor.alimento;
+
+            actual.derecha = eliminarRec(
+                    actual.derecha,
+                    sucesor.alimento.getNombre());
+        }
+
+        return actual;
+    }
+
+    private Nodo minimo(Nodo actual) {
+
+        while (actual.izquierda != null) {
+            actual = actual.izquierda;
+        }
+
+        return actual;
+    }
+
+    public List<Alimento> obtenerAlimentos() {
+
+        List<Alimento> resultado = new ArrayList<>();
+
+        recorridoInorden(raiz, resultado);
+
+        return resultado;
+    }
+
+    private void recorridoInorden(
+            Nodo actual, List<Alimento> resultado) {
+
+        if (actual != null) {
+
+            recorridoInorden(actual.izquierda, resultado);
+
+            resultado.add(actual.alimento);
+
+            recorridoInorden(actual.derecha, resultado);
+        }
+    }
+
+    public boolean estaVacio() {
+        return raiz == null;
+    }
+}
