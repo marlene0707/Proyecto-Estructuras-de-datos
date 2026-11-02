@@ -1,0 +1,170 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class MinHeap {
+
+    private final List<Alimento> heap = new ArrayList<>();
+
+    public void insertar(Alimento alimento) {
+
+        heap.add(alimento);
+
+        subir(heap.size() - 1);
+    }
+
+    public boolean estaVacio() {
+        return heap.isEmpty();
+    }
+
+    public int tamano() {
+        return heap.size();
+    }
+
+    public Alimento obtenerProximoACaducar() {
+
+        if (heap.isEmpty()) {
+            return null;
+        }
+
+        return heap.get(0);
+    }
+
+    public Alimento extraerProximo() {
+
+        if (heap.isEmpty()) {
+            return null;
+        }
+
+        Alimento primero = heap.get(0);
+
+        Alimento ultimo = heap.remove(heap.size() - 1);
+
+        if (!heap.isEmpty()) {
+
+            heap.set(0, ultimo);
+
+            bajar(0);
+        }
+
+        return primero;
+    }
+
+    public void eliminarPorNombre(String nombre) {
+
+        for (int i = 0; i < heap.size(); i++) {
+
+            if (heap.get(i).getNombre()
+                    .equalsIgnoreCase(nombre)) {
+
+                int ultimoIndice = heap.size() - 1;
+
+                Alimento ultimo = heap.remove(ultimoIndice);
+
+                if (i < heap.size()) {
+
+                    heap.set(i, ultimo);
+
+                    if (i > 0 && comparar(
+                            heap.get(i),
+                            heap.get((i - 1) / 2)) < 0) {
+
+                        subir(i);
+
+                    } else {
+
+                        bajar(i);
+                    }
+                }
+
+                return;
+            }
+        }
+    }
+
+    private int comparar(Alimento a, Alimento b) {
+
+        int resultado = a.getFechaCaducidad()
+                .compareTo(b.getFechaCaducidad());
+
+        if (resultado == 0) {
+            return a.getNombre().compareToIgnoreCase(
+                    b.getNombre());
+        }
+
+        return resultado;
+    }
+
+    private void subir(int indice) {
+
+        while (indice > 0) {
+
+            int padre = (indice - 1) / 2;
+
+            if (comparar(heap.get(indice),
+                    heap.get(padre)) >= 0) {
+                break;
+            }
+
+            intercambiar(indice, padre);
+
+            indice = padre;
+        }
+    }
+
+    private void bajar(int indice) {
+
+        int tamano = heap.size();
+
+        while (true) {
+
+            int izquierda = 2 * indice + 1;
+            int derecha = 2 * indice + 2;
+
+            int menor = indice;
+
+            if (izquierda < tamano &&
+                    comparar(heap.get(izquierda),
+                            heap.get(menor)) < 0) {
+
+                menor = izquierda;
+            }
+
+            if (derecha < tamano &&
+                    comparar(heap.get(derecha),
+                            heap.get(menor)) < 0) {
+
+                menor = derecha;
+            }
+
+            if (menor == indice) {
+                break;
+            }
+
+            intercambiar(indice, menor);
+
+            indice = menor;
+        }
+    }
+
+    private void intercambiar(int i, int j) {
+
+        Alimento temporal = heap.get(i);
+
+        heap.set(i, heap.get(j));
+
+        heap.set(j, temporal);
+    }
+
+    public List<Alimento> obtenerOrdenados() {
+
+        List<Alimento> copia = new ArrayList<>(heap);
+
+        copia.sort((a, b) -> comparar(a, b));
+
+        return copia;
+    }
+
+    public void limpiar() {
+        heap.clear();
+    }
+}
