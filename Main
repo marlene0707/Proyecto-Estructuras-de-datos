@@ -1,0 +1,2224 @@
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+
+public class Main extends JFrame {
+
+    private static final long serialVersionUID = 1L;
+
+    // ==========================================
+    // ESTRUCTURAS DE DATOS
+    // ==========================================
+
+    private final ArbolBST inventario = new ArbolBST();
+    private final MinHeap caducidades = new MinHeap();
+    private final ListaDobleCompras compras = new ListaDobleCompras();
+    private final PilaAcciones historial = new PilaAcciones();
+
+    private final GestorDescuentos gestorDescuentos =
+            new GestorDescuentos();
+
+    // ==========================================
+    // PALETA DE COLORES
+    // ==========================================
+
+    private final Color VERDE = new Color(96, 70, 181);
+    private final Color VERDE_CLARO = new Color(239, 234, 251);
+    private final Color FONDO = new Color(246, 244, 251);
+    private final Color TEXTO = new Color(48, 43, 65);
+    private final Color GRIS = new Color(125, 119, 140);
+    private final Color BORDE = new Color(229, 224, 240);
+
+    private final Color NARANJA = new Color(225, 153, 45);
+    private final Color ROJO = new Color(225, 91, 105);
+    private final Color AZUL = new Color(54, 151, 183);
+
+    private final Color TURQUESA = new Color(32, 169, 154);
+    private final Color CORAL = new Color(240, 120, 104);
+    private final Color AMARILLO = new Color(242, 184, 75);
+    private final Color LAVANDA = new Color(242, 239, 251);
+    private final Color MENTA = new Color(232, 247, 243);
+
+    // ==========================================
+    // COMPONENTES GENERALES
+    // ==========================================
+
+    private CardLayout cardLayout;
+    private JPanel panelContenido;
+
+    private DefaultTableModel modeloTabla;
+    private JTable tabla;
+
+    private DefaultListModel<String> modeloCompras;
+    private JList<String> listaCompras;
+
+    private JTextField campoBusqueda;
+
+    private JLabel lblProductos;
+    private JLabel lblUnidades;
+    private JLabel lblAlertas;
+    private JLabel lblCaducados;
+    private JLabel lblCompras;
+    private JLabel lblProximo;
+
+    private JLabel lblTotalComprado;
+    private JLabel lblAhorroCompras;
+
+    private JPanel panelDashboard;
+    private JPanel panelInventario;
+    private JPanel panelCaducidades;
+    private JPanel panelCompras;
+    private JPanel panelOfertas;
+
+    private JPanel panelTarjetasOfertas;
+    private JLabel lblCantidadOfertas;
+    private JLabel lblAhorroPotencial;
+
+    // ==========================================
+    // CONSTRUCTOR
+    // ==========================================
+
+    public Main() {
+
+        setTitle("FreshStock");
+        setSize(1250, 760);
+        setMinimumSize(new Dimension(1050, 650));
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        getContentPane().setBackground(FONDO);
+        setLayout(new BorderLayout());
+
+        construirInterfaz();
+        cargarDatosIniciales();
+        actualizarTodo();
+    }
+
+    // ==========================================
+    // CONSTRUCCIÓN GENERAL
+    // ==========================================
+
+    private void construirInterfaz() {
+
+        add(crearMenuLateral(), BorderLayout.WEST);
+
+        cardLayout = new CardLayout();
+
+        panelContenido = new JPanel(cardLayout);
+        panelContenido.setBackground(FONDO);
+        panelContenido.setBorder(
+                new EmptyBorder(25, 25, 25, 25));
+
+        panelDashboard = crearDashboard();
+        panelInventario = crearInventario();
+        panelCaducidades = crearCaducidades();
+        panelCompras = crearCompras();
+        panelOfertas = crearOfertas();
+
+        panelContenido.add(panelDashboard, "DASHBOARD");
+        panelContenido.add(panelInventario, "INVENTARIO");
+        panelContenido.add(panelCaducidades, "CADUCIDADES");
+        panelContenido.add(panelCompras, "COMPRAS");
+        panelContenido.add(panelOfertas, "OFERTAS");
+
+        add(panelContenido, BorderLayout.CENTER);
+
+        cardLayout.show(panelContenido, "DASHBOARD");
+    }
+
+    // ==========================================
+    // MENÚ LATERAL
+    // ==========================================
+
+    private JPanel crearMenuLateral() {
+
+        JPanel menu = new JPanel();
+        menu.setPreferredSize(new Dimension(245, 0));
+        menu.setBackground(Color.WHITE);
+        menu.setLayout(new BorderLayout());
+
+        JPanel superior = new JPanel();
+        superior.setOpaque(false);
+        superior.setLayout(new BoxLayout(
+                superior, BoxLayout.Y_AXIS));
+
+        superior.setBorder(
+                new EmptyBorder(30, 18, 20, 18));
+
+        JLabel logo = new JLabel("FreshStock");
+        logo.setFont(new Font("SansSerif", Font.BOLD, 27));
+        logo.setForeground(VERDE);
+
+        JLabel descripcion = new JLabel(
+                "SISTEMA INTELIGENTE DE INVENTARIO");
+
+        descripcion.setFont(
+                new Font("SansSerif", Font.BOLD, 9));
+
+        descripcion.setForeground(GRIS);
+
+        superior.add(logo);
+        superior.add(Box.createVerticalStrut(5));
+        superior.add(descripcion);
+        superior.add(Box.createVerticalStrut(45));
+
+        superior.add(crearBotonMenu(
+                "  Panel principal", "DASHBOARD"));
+
+        superior.add(Box.createVerticalStrut(10));
+
+        superior.add(crearBotonMenu(
+                "  Inventario", "INVENTARIO"));
+
+        superior.add(Box.createVerticalStrut(10));
+
+        superior.add(crearBotonMenu(
+                "  Control de caducidades", "CADUCIDADES"));
+
+        superior.add(Box.createVerticalStrut(10));
+
+        superior.add(crearBotonMenu(
+                "  Lista de compras", "COMPRAS"));
+
+        superior.add(Box.createVerticalStrut(10));
+
+        superior.add(crearBotonMenu(
+                "  Ofertas inteligentes", "OFERTAS"));
+
+        menu.add(superior, BorderLayout.NORTH);
+
+        JPanel inferior = new JPanel();
+        inferior.setOpaque(false);
+        inferior.setBorder(
+                new EmptyBorder(15, 18, 25, 18));
+
+        inferior.setLayout(new BoxLayout(
+                inferior, BoxLayout.Y_AXIS));
+
+        JLabel version = new JLabel("FreshStock | Versión 2.0");
+        version.setFont(
+                new Font("SansSerif", Font.PLAIN, 11));
+
+        version.setForeground(GRIS);
+
+        inferior.add(version);
+        menu.add(inferior, BorderLayout.SOUTH);
+
+        menu.setBorder(
+                BorderFactory.createMatteBorder(
+                        0, 0, 0, 1, BORDE));
+
+        return menu;
+    }
+
+    private JButton crearBotonMenu(
+            String texto, String seccion) {
+
+        JButton boton = new JButton(texto);
+
+        boton.setFont(
+                new Font("SansSerif", Font.BOLD, 13));
+
+        boton.setHorizontalAlignment(SwingConstants.LEFT);
+        boton.setForeground(TEXTO);
+        boton.setBackground(Color.WHITE);
+        boton.setBorder(new EmptyBorder(13, 12, 13, 12));
+        boton.setFocusPainted(false);
+        boton.setMaximumSize(new Dimension(210, 45));
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        boton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        boton.setOpaque(true);
+
+        boton.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                boton.setBackground(VERDE_CLARO);
+                boton.setForeground(VERDE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                boton.setBackground(Color.WHITE);
+                boton.setForeground(TEXTO);
+            }
+        });
+
+        boton.addActionListener(e -> {
+
+            cardLayout.show(panelContenido, seccion);
+
+            if (seccion.equals("CADUCIDADES")) {
+                actualizarCaducidades();
+            }
+
+            if (seccion.equals("COMPRAS")) {
+                actualizarListaCompras();
+            }
+
+            if (seccion.equals("INVENTARIO")) {
+                actualizarTabla();
+            }
+
+            if (seccion.equals("OFERTAS")) {
+                actualizarOfertas();
+            }
+        });
+
+        return boton;
+    }
+
+    // ==========================================
+    // PANEL PRINCIPAL
+    // ==========================================
+
+    private JPanel crearDashboard() {
+
+        JPanel panel = new JPanel(new BorderLayout(0, 22));
+        panel.setBackground(FONDO);
+
+        panel.add(crearEncabezado(
+                "Panel principal",
+                "Resumen general de tu inventario"),
+                BorderLayout.NORTH);
+
+        JPanel centro = new JPanel();
+        centro.setOpaque(false);
+
+        centro.setLayout(new BoxLayout(
+                centro, BoxLayout.Y_AXIS));
+
+        JPanel indicadores = new JPanel(
+                new GridLayout(1, 4, 15, 0));
+
+        indicadores.setOpaque(false);
+
+        lblProductos = new JLabel("0");
+        lblUnidades = new JLabel("0");
+        lblAlertas = new JLabel("0");
+        lblCaducados = new JLabel("0");
+
+        indicadores.add(crearTarjeta(
+                "Productos registrados",
+                lblProductos,
+                "Total de alimentos",
+                VERDE));
+
+        indicadores.add(crearTarjeta(
+                "Unidades disponibles",
+                lblUnidades,
+                "Existencias actuales",
+                TURQUESA));
+
+        indicadores.add(crearTarjeta(
+                "Próximos a caducar",
+                lblAlertas,
+                "Dentro de 3 días",
+                NARANJA));
+
+        indicadores.add(crearTarjeta(
+                "Productos caducados",
+                lblCaducados,
+                "Requieren atención",
+                ROJO));
+
+        centro.add(indicadores);
+        centro.add(Box.createVerticalStrut(22));
+
+        JPanel resumen = new JPanel(
+                new BorderLayout(10, 10));
+
+        resumen.setBackground(Color.WHITE);
+
+        resumen.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(20, 20, 20, 20)));
+
+        JLabel titulo = new JLabel(
+                "¿Qué puedes hacer con FreshStock?");
+
+        titulo.setFont(
+                new Font("SansSerif", Font.BOLD, 18));
+
+        titulo.setForeground(VERDE);
+
+        JLabel informacion = new JLabel(
+                "<html><div style='line-height:1.8'>"
+                + "Administra tus alimentos desde un solo lugar."
+                + "<br>Consulta las fechas de caducidad y organiza"
+                + "<br>tus compras de manera sencilla."
+                + "<br>Identifica oportunidades de descuento para"
+                + "<br>aprovechar los productos próximos a caducar."
+                + "</div></html>");
+
+        informacion.setFont(
+                new Font("SansSerif", Font.PLAIN, 14));
+
+        informacion.setForeground(GRIS);
+
+        JButton irInventario = crearBoton(
+                "Consultar inventario", VERDE);
+
+        irInventario.addActionListener(e ->
+                cardLayout.show(panelContenido, "INVENTARIO"));
+
+        JPanel parteInferior = new JPanel(
+                new FlowLayout(FlowLayout.LEFT, 0, 10));
+
+        parteInferior.setOpaque(false);
+        parteInferior.add(irInventario);
+
+        resumen.add(titulo, BorderLayout.NORTH);
+        resumen.add(informacion, BorderLayout.CENTER);
+        resumen.add(parteInferior, BorderLayout.SOUTH);
+
+        centro.add(resumen);
+        centro.add(Box.createVerticalStrut(20));
+
+        JPanel actividad = new JPanel(
+                new BorderLayout(0, 12));
+
+        actividad.setBackground(Color.WHITE);
+
+        actividad.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(18, 20, 18, 20)));
+
+        JLabel tituloActividad = new JLabel(
+                "Próximo alimento por caducar");
+
+        tituloActividad.setFont(
+                new Font("SansSerif", Font.BOLD, 17));
+
+        tituloActividad.setForeground(VERDE);
+
+        lblProximo = new JLabel(
+                "No hay alimentos registrados");
+
+        lblProximo.setFont(
+                new Font("SansSerif", Font.PLAIN, 14));
+
+        lblProximo.setForeground(GRIS);
+
+        actividad.add(tituloActividad, BorderLayout.NORTH);
+        actividad.add(lblProximo, BorderLayout.CENTER);
+
+        centro.add(actividad);
+
+        panel.add(centro, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // ==========================================
+    // TARJETAS DE INDICADORES
+    // ==========================================
+
+    private JPanel crearTarjeta(
+            String titulo,
+            JLabel valor,
+            String descripcion,
+            Color color) {
+
+        JPanel tarjeta = new JPanel(
+                new BorderLayout(0, 12));
+
+        tarjeta.setBackground(Color.WHITE);
+
+        tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(16, 16, 16, 16)));
+
+        JPanel indicador = new JPanel();
+        indicador.setBackground(color);
+        indicador.setPreferredSize(new Dimension(5, 1));
+
+        tarjeta.add(indicador, BorderLayout.WEST);
+
+        JPanel contenido = new JPanel(
+                new BorderLayout(0, 10));
+
+        contenido.setOpaque(false);
+        contenido.setBorder(
+                new EmptyBorder(0, 10, 0, 0));
+
+        JLabel etiqueta = new JLabel(titulo);
+
+        etiqueta.setFont(
+                new Font("SansSerif", Font.BOLD, 12));
+
+        etiqueta.setForeground(GRIS);
+
+        valor.setFont(
+                new Font("SansSerif", Font.BOLD, 29));
+
+        valor.setForeground(color);
+
+        JLabel detalle = new JLabel(descripcion);
+
+        detalle.setFont(
+                new Font("SansSerif", Font.PLAIN, 11));
+
+        detalle.setForeground(GRIS);
+
+        contenido.add(etiqueta, BorderLayout.NORTH);
+        contenido.add(valor, BorderLayout.CENTER);
+        contenido.add(detalle, BorderLayout.SOUTH);
+
+        tarjeta.add(contenido, BorderLayout.CENTER);
+
+        return tarjeta;
+    }
+
+    // ==========================================
+    // INVENTARIO
+    // ==========================================
+
+    private JPanel crearInventario() {
+
+        JPanel panel = new JPanel(
+                new BorderLayout(0, 18));
+
+        panel.setBackground(FONDO);
+
+        panel.add(crearEncabezado(
+                "Inventario",
+                "Administra y consulta tus alimentos"),
+                BorderLayout.NORTH);
+
+        JPanel contenido = new JPanel(
+                new BorderLayout(0, 15));
+
+        contenido.setBackground(Color.WHITE);
+
+        contenido.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(18, 18, 18, 18)));
+
+        JPanel superior = new JPanel(
+                new BorderLayout(10, 10));
+
+        superior.setOpaque(false);
+
+        campoBusqueda = new JTextField();
+
+        campoBusqueda.setFont(
+                new Font("SansSerif", Font.PLAIN, 14));
+
+        campoBusqueda.setPreferredSize(
+                new Dimension(250, 38));
+
+        campoBusqueda.setToolTipText(
+                "Buscar alimento o categoría");
+
+        JButton buscar = crearBoton("Buscar", VERDE);
+
+        JButton limpiar = crearBoton(
+                "Limpiar", GRIS);
+
+        JPanel busqueda = new JPanel(
+                new BorderLayout(8, 0));
+
+        busqueda.setOpaque(false);
+
+        busqueda.add(campoBusqueda, BorderLayout.CENTER);
+
+        JPanel botonesBusqueda = new JPanel(
+                new GridLayout(1, 2, 8, 0));
+
+        botonesBusqueda.setOpaque(false);
+        botonesBusqueda.add(buscar);
+        botonesBusqueda.add(limpiar);
+
+        busqueda.add(
+                botonesBusqueda, BorderLayout.EAST);
+
+        JButton agregar = crearBoton(
+                "+ Agregar alimento", TURQUESA);
+
+        JPanel filaSuperior = new JPanel(
+                new BorderLayout(10, 0));
+
+        filaSuperior.setOpaque(false);
+        filaSuperior.add(busqueda, BorderLayout.CENTER);
+        filaSuperior.add(agregar, BorderLayout.EAST);
+
+        superior.add(filaSuperior, BorderLayout.NORTH);
+
+        String[] columnas = {
+            "Alimento",
+            "Categoría",
+            "Cantidad",
+            "Precio original",
+            "Descuento",
+            "Precio final",
+            "Fecha de caducidad",
+            "Estado"
+        };
+
+        modeloTabla = new DefaultTableModel(columnas, 0) {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public boolean isCellEditable(
+                    int fila, int columna) {
+                return false;
+            }
+        };
+
+        tabla = new JTable(modeloTabla);
+
+        tabla.setRowHeight(40);
+
+        tabla.setFont(
+                new Font("SansSerif", Font.PLAIN, 12));
+
+        tabla.setSelectionMode(
+                ListSelectionModel.SINGLE_SELECTION);
+
+        tabla.setGridColor(BORDE);
+        tabla.setShowVerticalLines(false);
+        tabla.setShowHorizontalLines(true);
+
+        tabla.setSelectionBackground(
+                new Color(232, 225, 250));
+
+        tabla.setSelectionForeground(TEXTO);
+
+        tabla.setAutoResizeMode(
+                JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        tabla.getTableHeader().setFont(
+                new Font("SansSerif", Font.BOLD, 11));
+
+        tabla.getTableHeader().setPreferredSize(
+                new Dimension(0, 42));
+
+        tabla.getTableHeader().setBackground(VERDE);
+        tabla.getTableHeader().setForeground(Color.WHITE);
+        tabla.getTableHeader().setOpaque(true);
+
+        configurarColoresTabla();
+
+        JScrollPane scroll = new JScrollPane(tabla);
+
+        scroll.setBorder(
+                BorderFactory.createLineBorder(BORDE));
+
+        JPanel acciones = new JPanel(
+                new FlowLayout(FlowLayout.LEFT, 8, 0));
+
+        acciones.setOpaque(false);
+
+        JButton editar = crearBoton("Editar", AZUL);
+        JButton eliminar = crearBoton("Eliminar", ROJO);
+
+        JButton comprasBtn = crearBoton(
+                "Añadir a compras", TURQUESA);
+
+        JButton deshacer = crearBoton(
+                "Deshacer", GRIS);
+
+        acciones.add(editar);
+        acciones.add(eliminar);
+        acciones.add(comprasBtn);
+        acciones.add(deshacer);
+
+        buscar.addActionListener(e -> actualizarTabla());
+
+        campoBusqueda.addActionListener(
+                e -> actualizarTabla());
+
+        limpiar.addActionListener(e -> {
+            campoBusqueda.setText("");
+            actualizarTabla();
+        });
+
+        agregar.addActionListener(
+                e -> agregarAlimento());
+
+        editar.addActionListener(
+                e -> editarAlimento());
+
+        eliminar.addActionListener(
+                e -> eliminarAlimento());
+
+        comprasBtn.addActionListener(
+                e -> agregarSeleccionadoACompras());
+
+        deshacer.addActionListener(
+                e -> deshacerAccion());
+
+        contenido.add(superior, BorderLayout.NORTH);
+        contenido.add(scroll, BorderLayout.CENTER);
+        contenido.add(acciones, BorderLayout.SOUTH);
+
+        panel.add(contenido, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // ==========================================
+    // CONTROL DE CADUCIDADES
+    // ==========================================
+
+    private JPanel crearCaducidades() {
+
+        JPanel panel = new JPanel(
+                new BorderLayout(0, 18));
+
+        panel.setBackground(FONDO);
+
+        panel.add(crearEncabezado(
+                "Control de caducidades",
+                "Consulta los alimentos según su fecha"),
+                BorderLayout.NORTH);
+
+        JPanel contenido = new JPanel(
+                new BorderLayout(0, 15));
+
+        contenido.setBackground(Color.WHITE);
+
+        contenido.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(20, 20, 20, 20)));
+
+        JLabel titulo = new JLabel(
+                "Alimentos ordenados por fecha de caducidad");
+
+        titulo.setFont(
+                new Font("SansSerif", Font.BOLD, 16));
+
+        titulo.setForeground(VERDE);
+
+        DefaultListModel<String> modelo =
+                new DefaultListModel<>();
+
+        JList<String> lista = new JList<>(modelo);
+
+        lista.setFont(
+                new Font("SansSerif", Font.PLAIN, 14));
+
+        lista.setFixedCellHeight(42);
+        lista.setSelectionBackground(VERDE_CLARO);
+
+        JScrollPane scroll = new JScrollPane(lista);
+
+        scroll.setBorder(
+                BorderFactory.createLineBorder(BORDE));
+
+        JButton actualizar = crearBoton(
+                "Actualizar alertas", VERDE);
+
+        actualizar.addActionListener(
+                e -> actualizarCaducidades());
+
+        contenido.add(titulo, BorderLayout.NORTH);
+        contenido.add(scroll, BorderLayout.CENTER);
+        contenido.add(actualizar, BorderLayout.SOUTH);
+
+        panel.add(contenido, BorderLayout.CENTER);
+
+        panel.putClientProperty(
+                "modeloCaducidades", modelo);
+
+        return panel;
+    }
+
+    private void actualizarCaducidades() {
+
+        DefaultListModel<String> modelo =
+                (DefaultListModel<String>)
+                panelCaducidades.getClientProperty(
+                        "modeloCaducidades");
+
+        if (modelo == null) {
+            return;
+        }
+
+        modelo.clear();
+
+        for (Alimento alimento :
+                caducidades.obtenerOrdenados()) {
+
+            long dias = alimento.diasParaCaducar();
+            String estado;
+
+            if (dias < 0) {
+                estado = "CADUCADO";
+
+            } else if (dias == 0) {
+                estado = "CADUCA HOY";
+
+            } else if (dias <= 3) {
+                estado = "PRÓXIMO A CADUCAR";
+
+            } else {
+                estado = "VIGENTE";
+            }
+
+            String mensaje = alimento.getNombre()
+                    + "   |   "
+                    + alimento.getFechaCaducidad()
+                    + "   |   "
+                    + estado;
+
+            if (dias < 0) {
+
+                mensaje += " (" + Math.abs(dias)
+                        + " días de retraso)";
+
+            } else {
+
+                mensaje += " (" + dias
+                        + " días restantes)";
+            }
+
+            modelo.addElement(mensaje);
+        }
+    }
+
+    // ==========================================
+    // LISTA DE COMPRAS
+    // ==========================================
+
+    private JPanel crearCompras() {
+
+        JPanel panel = new JPanel(
+                new BorderLayout(0, 18));
+
+        panel.setBackground(FONDO);
+
+        panel.add(crearEncabezado(
+                "Lista de compras",
+                "Marca tus productos y consulta cuánto gastas y ahorras"),
+                BorderLayout.NORTH);
+
+        JPanel contenido = new JPanel(
+                new BorderLayout(0, 15));
+
+        contenido.setBackground(Color.WHITE);
+
+        contenido.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(20, 20, 20, 20)));
+
+        // Panel superior con el estado de la lista
+
+        JPanel superior = new JPanel();
+
+        superior.setOpaque(false);
+
+        superior.setLayout(
+                new BoxLayout(superior, BoxLayout.Y_AXIS));
+
+        lblCompras = new JLabel(
+                "Productos pendientes: 0 | Productos comprados: 0");
+
+        lblCompras.setFont(
+                new Font("SansSerif", Font.BOLD, 14));
+
+        lblCompras.setForeground(VERDE);
+
+        superior.add(lblCompras);
+        superior.add(Box.createVerticalStrut(15));
+
+        // Indicadores de gastos y ahorros
+
+        JPanel indicadores = new JPanel(
+                new GridLayout(1, 2, 15, 0));
+
+        indicadores.setOpaque(false);
+
+        lblTotalComprado = new JLabel("$0.00");
+        lblAhorroCompras = new JLabel("$0.00");
+
+        indicadores.add(crearTarjeta(
+                "Total gastado",
+                lblTotalComprado,
+                "Productos marcados como comprados",
+                TURQUESA));
+
+        indicadores.add(crearTarjeta(
+                "Ahorro acumulado",
+                lblAhorroCompras,
+                "Descuentos de tus compras",
+                CORAL));
+
+        superior.add(indicadores);
+        superior.add(Box.createVerticalStrut(15));
+
+        // Lista de productos
+
+        modeloCompras = new DefaultListModel<>();
+
+        listaCompras = new JList<>(modeloCompras);
+
+        listaCompras.setFont(
+                new Font("SansSerif", Font.PLAIN, 13));
+
+        listaCompras.setFixedCellHeight(82);
+
+        listaCompras.setSelectionMode(
+                ListSelectionModel.SINGLE_SELECTION);
+
+        listaCompras.setSelectionBackground(VERDE_CLARO);
+
+        listaCompras.setCellRenderer((lista, valor, indice,
+                seleccionado, tieneFoco) -> {
+
+            JPanel fila = new JPanel(
+                    new BorderLayout(12, 5));
+
+            fila.setBorder(
+                    new EmptyBorder(10, 12, 10, 12));
+
+            fila.setBackground(
+                    seleccionado ? VERDE_CLARO : Color.WHITE);
+
+            String nombre = extraerNombreCompra(valor);
+
+            boolean comprado = valor.startsWith("[COMPRADO]");
+
+            JCheckBox casilla = new JCheckBox();
+
+            casilla.setSelected(comprado);
+            casilla.setOpaque(false);
+            casilla.setFocusable(false);
+
+            fila.add(casilla, BorderLayout.WEST);
+
+            JPanel informacion = new JPanel();
+
+            informacion.setOpaque(false);
+
+            informacion.setLayout(
+                    new BoxLayout(
+                            informacion, BoxLayout.Y_AXIS));
+
+            JLabel etiquetaNombre = new JLabel(nombre);
+
+            etiquetaNombre.setFont(
+                    new Font("SansSerif", Font.BOLD, 14));
+
+            etiquetaNombre.setForeground(
+                    comprado ? GRIS : TEXTO);
+
+            Alimento alimento = inventario.buscar(nombre);
+
+            JLabel detalle = new JLabel();
+
+            detalle.setFont(
+                    new Font("SansSerif", Font.PLAIN, 12));
+
+            if (alimento != null) {
+
+                double precioOriginal = alimento.getPrecio();
+
+                double precioFinal =
+                        alimento.calcularPrecioFinal();
+
+                int descuento = alimento.calcularDescuento();
+
+                if (descuento > 0) {
+
+                    detalle.setText(
+                            String.format(
+                                    "<html>Precio original: "
+                                    + "<s>$%.2f</s> &nbsp; "
+                                    + "| Descuento: "
+                                    + "<font color='#20A99A'>%d%%</font>"
+                                    + " &nbsp; | Precio final: "
+                                    + "<b>$%.2f</b></html>",
+                                    precioOriginal,
+                                    descuento,
+                                    precioFinal));
+
+                } else {
+
+                    detalle.setText(
+                            String.format(
+                                    "Precio: $%.2f | Sin descuento",
+                                    precioFinal));
+                }
+
+                detalle.setForeground(
+                        comprado ? GRIS : TURQUESA);
+
+            } else {
+
+                detalle.setText(
+                        "Precio no registrado en el inventario");
+
+                detalle.setForeground(GRIS);
+            }
+
+            informacion.add(etiquetaNombre);
+            informacion.add(Box.createVerticalStrut(7));
+            informacion.add(detalle);
+
+            fila.add(informacion, BorderLayout.CENTER);
+
+            fila.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(
+                            0, 0, 1, 0, BORDE),
+                    new EmptyBorder(10, 12, 10, 12)));
+
+            return fila;
+        });
+
+        // Al hacer clic sobre un producto cambia su estado
+
+        listaCompras.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+                int indice = listaCompras.locationToIndex(
+                        e.getPoint());
+
+                if (indice >= 0) {
+
+                    Rectangle limites =
+                            listaCompras.getCellBounds(
+                                    indice, indice);
+
+                    if (limites != null
+                            && limites.contains(e.getPoint())) {
+
+                        listaCompras.setSelectedIndex(indice);
+
+                        cambiarEstadoCompra();
+                    }
+                }
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(listaCompras);
+
+        scroll.setBorder(
+                BorderFactory.createLineBorder(BORDE));
+
+        // Botones
+
+        JPanel botones = new JPanel(
+                new GridLayout(1, 3, 10, 0));
+
+        botones.setOpaque(false);
+
+        JButton agregar = crearBoton(
+                "+ Agregar producto", TURQUESA);
+
+        JButton cambiar = crearBoton(
+                "Marcar / desmarcar", AZUL);
+
+        JButton eliminar = crearBoton(
+                "Eliminar producto", ROJO);
+
+        agregar.addActionListener(
+                e -> agregarCompraManual());
+
+        cambiar.addActionListener(
+                e -> cambiarEstadoCompra());
+
+        eliminar.addActionListener(
+                e -> eliminarDeCompras());
+
+        botones.add(agregar);
+        botones.add(cambiar);
+        botones.add(eliminar);
+
+        contenido.add(superior, BorderLayout.NORTH);
+        contenido.add(scroll, BorderLayout.CENTER);
+        contenido.add(botones, BorderLayout.SOUTH);
+
+        panel.add(contenido, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // ==========================================
+    // OFERTAS INTELIGENTES
+    // ==========================================
+
+    private JPanel crearOfertas() {
+
+        JPanel panel = new JPanel(
+                new BorderLayout(0, 18));
+
+        panel.setBackground(FONDO);
+
+        panel.add(crearEncabezado(
+                "Ofertas inteligentes",
+                "Descuentos automáticos según la fecha de caducidad"),
+                BorderLayout.NORTH);
+
+        JPanel contenido = new JPanel(
+                new BorderLayout(0, 18));
+
+        contenido.setOpaque(false);
+
+        JPanel indicadores = new JPanel(
+                new GridLayout(1, 2, 15, 0));
+
+        indicadores.setOpaque(false);
+
+        lblCantidadOfertas = new JLabel("0");
+        lblAhorroPotencial = new JLabel("$0.00");
+
+        indicadores.add(crearTarjeta(
+                "Ofertas disponibles",
+                lblCantidadOfertas,
+                "Alimentos con descuento",
+                TURQUESA));
+
+        indicadores.add(crearTarjeta(
+                "Ahorro potencial",
+                lblAhorroPotencial,
+                "Ahorro total estimado",
+                VERDE));
+
+        JPanel listaPanel = new JPanel(
+                new BorderLayout(0, 12));
+
+        listaPanel.setBackground(Color.WHITE);
+
+        listaPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDE),
+                new EmptyBorder(18, 18, 18, 18)));
+
+        JPanel encabezadoLista = new JPanel(
+                new BorderLayout());
+
+        encabezadoLista.setOpaque(false);
+
+        JLabel titulo = new JLabel(
+                "Productos con descuento");
+
+        titulo.setFont(
+                new Font("SansSerif", Font.BOLD, 17));
+
+        titulo.setForeground(VERDE);
+
+        JButton actualizar = crearBoton(
+                "Actualizar ofertas", TURQUESA);
+
+        actualizar.addActionListener(
+                e -> actualizarOfertas());
+
+        encabezadoLista.add(
+                titulo, BorderLayout.WEST);
+
+        encabezadoLista.add(
+                actualizar, BorderLayout.EAST);
+
+        panelTarjetasOfertas = new JPanel();
+
+        panelTarjetasOfertas.setBackground(Color.WHITE);
+
+        panelTarjetasOfertas.setLayout(
+                new BoxLayout(
+                        panelTarjetasOfertas,
+                        BoxLayout.Y_AXIS));
+
+        JScrollPane scroll = new JScrollPane(
+                panelTarjetasOfertas);
+
+        scroll.setBorder(
+                BorderFactory.createLineBorder(BORDE));
+
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        listaPanel.add(
+                encabezadoLista, BorderLayout.NORTH);
+
+        listaPanel.add(
+                scroll, BorderLayout.CENTER);
+
+        contenido.add(indicadores, BorderLayout.NORTH);
+        contenido.add(listaPanel, BorderLayout.CENTER);
+
+        panel.add(contenido, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void actualizarOfertas() {
+
+        if (panelTarjetasOfertas == null) {
+            return;
+        }
+
+        gestorDescuentos.actualizarOfertas(
+                inventario.obtenerAlimentos());
+
+        List<Alimento> ofertas =
+                gestorDescuentos.obtenerOfertasOrdenadas();
+
+        panelTarjetasOfertas.removeAll();
+
+        double ahorroTotal = 0;
+
+        for (Alimento alimento : ofertas) {
+
+            panelTarjetasOfertas.add(
+                    crearTarjetaOferta(alimento));
+
+            panelTarjetasOfertas.add(
+                    Box.createVerticalStrut(10));
+
+            double ahorroUnidad =
+                    alimento.getPrecio()
+                    - alimento.calcularPrecioFinal();
+
+            ahorroTotal += ahorroUnidad
+                    * alimento.getCantidad();
+        }
+
+        lblCantidadOfertas.setText(
+                String.valueOf(ofertas.size()));
+
+        lblAhorroPotencial.setText(
+                String.format("$%.2f", ahorroTotal));
+
+        if (ofertas.isEmpty()) {
+
+            JLabel sinOfertas = new JLabel(
+                    "No hay alimentos con descuento disponibles.");
+
+            sinOfertas.setFont(
+                    new Font("SansSerif", Font.PLAIN, 14));
+
+            sinOfertas.setForeground(GRIS);
+
+            sinOfertas.setBorder(
+                    new EmptyBorder(25, 15, 25, 15));
+
+            panelTarjetasOfertas.add(sinOfertas);
+        }
+
+        panelTarjetasOfertas.revalidate();
+        panelTarjetasOfertas.repaint();
+    }
+
+    private JPanel crearTarjetaOferta(Alimento alimento) {
+
+        JPanel tarjeta = new JPanel(
+                new BorderLayout(15, 8));
+
+        tarjeta.setBackground(
+                new Color(255, 252, 244));
+
+        tarjeta.setMaximumSize(
+                new Dimension(Integer.MAX_VALUE, 125));
+
+        tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(
+                        new Color(242, 224, 190)),
+                new EmptyBorder(15, 18, 15, 18)));
+
+        JPanel informacion = new JPanel();
+
+        informacion.setOpaque(false);
+
+        informacion.setLayout(
+                new BoxLayout(
+                        informacion, BoxLayout.Y_AXIS));
+
+        JLabel nombre = new JLabel(
+                alimento.getNombre());
+
+        nombre.setFont(
+                new Font("SansSerif", Font.BOLD, 16));
+
+        nombre.setForeground(TEXTO);
+
+        JLabel categoria = new JLabel(
+                alimento.getCategoria()
+                + "  |  Cantidad disponible: "
+                + alimento.getCantidad());
+
+        categoria.setFont(
+                new Font("SansSerif", Font.PLAIN, 12));
+
+        categoria.setForeground(GRIS);
+
+        long dias = alimento.diasParaCaducar();
+
+        String caducidad;
+
+        if (dias == 0) {
+
+            caducidad = "Caduca hoy";
+
+        } else {
+
+            caducidad = "Caduca en "
+                    + dias + " días";
+        }
+
+        JLabel fecha = new JLabel(caducidad);
+
+        fecha.setFont(
+                new Font("SansSerif", Font.PLAIN, 12));
+
+        fecha.setForeground(NARANJA);
+
+        informacion.add(nombre);
+        informacion.add(Box.createVerticalStrut(5));
+        informacion.add(categoria);
+        informacion.add(Box.createVerticalStrut(5));
+        informacion.add(fecha);
+
+        JPanel precios = new JPanel();
+
+        precios.setOpaque(false);
+
+        precios.setLayout(
+                new BoxLayout(
+                        precios, BoxLayout.Y_AXIS));
+
+        int descuento = alimento.calcularDescuento();
+
+        JLabel porcentaje = new JLabel(
+                descuento + "% DE DESCUENTO");
+
+        porcentaje.setFont(
+                new Font("SansSerif", Font.BOLD, 14));
+
+        porcentaje.setForeground(TURQUESA);
+
+        JLabel precioOriginal = new JLabel(
+                String.format(
+                        "<html><s>$%.2f</s></html>",
+                        alimento.getPrecio()));
+
+        precioOriginal.setFont(
+                new Font("SansSerif", Font.PLAIN, 12));
+
+        precioOriginal.setForeground(GRIS);
+
+        JLabel precioFinal = new JLabel(
+                String.format(
+                        "$%.2f",
+                        alimento.calcularPrecioFinal()));
+
+        precioFinal.setFont(
+                new Font("SansSerif", Font.BOLD, 20));
+
+        precioFinal.setForeground(VERDE);
+
+        precios.add(porcentaje);
+        precios.add(Box.createVerticalStrut(3));
+        precios.add(precioOriginal);
+        precios.add(precioFinal);
+
+        tarjeta.add(
+                informacion, BorderLayout.CENTER);
+
+        tarjeta.add(
+                precios, BorderLayout.EAST);
+
+        return tarjeta;
+    }
+
+    // ==========================================
+    // ENCABEZADOS Y BOTONES
+    // ==========================================
+
+    private JPanel crearEncabezado(
+            String titulo, String subtitulo) {
+
+        JPanel panel = new JPanel(
+                new GridLayout(2, 1, 0, 5));
+
+        panel.setOpaque(false);
+
+        JLabel nombre = new JLabel(titulo);
+
+        nombre.setFont(
+                new Font("SansSerif", Font.BOLD, 27));
+
+        nombre.setForeground(TEXTO);
+
+        JLabel descripcion = new JLabel(subtitulo);
+
+        descripcion.setFont(
+                new Font("SansSerif", Font.PLAIN, 13));
+
+        descripcion.setForeground(GRIS);
+
+        panel.add(nombre);
+        panel.add(descripcion);
+
+        return panel;
+    }
+
+    private JButton crearBoton(
+            String texto, Color color) {
+
+        JButton boton = new JButton(texto);
+
+        boton.setFont(
+                new Font("SansSerif", Font.BOLD, 12));
+
+        boton.setForeground(Color.WHITE);
+        boton.setBackground(color);
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setOpaque(true);
+
+        boton.setCursor(
+                new Cursor(Cursor.HAND_CURSOR));
+
+        boton.setPreferredSize(
+                new Dimension(145, 38));
+
+        boton.setBorder(
+                new EmptyBorder(8, 14, 8, 14));
+
+        boton.addMouseListener(
+                new MouseAdapter() {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                boton.setBackground(color.darker());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                boton.setBackground(color);
+            }
+        });
+
+        return boton;
+    }
+
+    // ==========================================
+    // OPERACIONES DEL INVENTARIO
+    // ==========================================
+
+    private void agregarAlimento() {
+
+        JTextField nombre = new JTextField();
+        JTextField categoria = new JTextField();
+        JTextField cantidad = new JTextField();
+        JTextField precio = new JTextField();
+
+        JTextField fecha = new JTextField(
+                LocalDate.now().plusDays(7).toString());
+
+        Object[] campos = {
+            "Nombre:", nombre,
+            "Categoría:", categoria,
+            "Cantidad:", cantidad,
+            "Precio por unidad:", precio,
+            "Fecha de caducidad (AAAA-MM-DD):", fecha
+        };
+
+        int opcion = JOptionPane.showConfirmDialog(
+                this,
+                campos,
+                "Registrar alimento",
+                JOptionPane.OK_CANCEL_OPTION);
+
+        if (opcion != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String n = nombre.getText().trim();
+        String c = categoria.getText().trim();
+
+        if (n.isEmpty() || c.isEmpty()) {
+
+            mostrarError(
+                    "Completa todos los campos.");
+
+            return;
+        }
+
+        try {
+
+            int unidades = Integer.parseInt(
+                    cantidad.getText().trim());
+
+            double precioUnitario = Double.parseDouble(
+                    precio.getText().trim());
+
+            LocalDate caducidad = LocalDate.parse(
+                    fecha.getText().trim());
+
+            if (unidades < 0 || precioUnitario < 0) {
+
+                mostrarError(
+                        "La cantidad y el precio no pueden ser negativos.");
+
+                return;
+            }
+
+            if (inventario.buscar(n) != null) {
+
+                mostrarError(
+                        "Ya existe un alimento con ese nombre.");
+
+                return;
+            }
+
+            Alimento nuevo = new Alimento(
+                    n, c, unidades, precioUnitario, caducidad);
+
+            inventario.insertar(nuevo);
+
+            historial.push(() -> {
+
+                inventario.eliminar(n);
+                reconstruirHeap();
+                actualizarTodo();
+            });
+
+            reconstruirHeap();
+            actualizarTodo();
+
+        } catch (NumberFormatException ex) {
+
+            mostrarError(
+                    "La cantidad debe ser un número entero y el precio debe ser numérico.");
+
+        } catch (DateTimeParseException ex) {
+
+            mostrarError(
+                    "La fecha debe tener el formato AAAA-MM-DD.");
+        }
+    }
+
+    private void editarAlimento() {
+
+        Alimento alimento = obtenerSeleccionado();
+
+        if (alimento == null) {
+
+            mostrarError(
+                    "Selecciona un alimento.");
+
+            return;
+        }
+
+        String nombreAnterior = alimento.getNombre();
+        String categoriaAnterior = alimento.getCategoria();
+
+        int cantidadAnterior = alimento.getCantidad();
+
+        double precioAnterior = alimento.getPrecio();
+
+        LocalDate fechaAnterior =
+                alimento.getFechaCaducidad();
+
+        JTextField nombre = new JTextField(nombreAnterior);
+
+        JTextField categoria = new JTextField(
+                categoriaAnterior);
+
+        JTextField cantidad = new JTextField(
+                String.valueOf(cantidadAnterior));
+
+        JTextField precio = new JTextField(
+                String.valueOf(precioAnterior));
+
+        JTextField fecha = new JTextField(
+                fechaAnterior.toString());
+
+        Object[] campos = {
+            "Nombre:", nombre,
+            "Categoría:", categoria,
+            "Cantidad:", cantidad,
+            "Precio por unidad:", precio,
+            "Fecha de caducidad (AAAA-MM-DD):", fecha
+        };
+
+        int opcion = JOptionPane.showConfirmDialog(
+                this,
+                campos,
+                "Editar alimento",
+                JOptionPane.OK_CANCEL_OPTION);
+
+        if (opcion != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String nuevoNombre = nombre.getText().trim();
+
+        String nuevaCategoria =
+                categoria.getText().trim();
+
+        try {
+
+            int nuevaCantidad = Integer.parseInt(
+                    cantidad.getText().trim());
+
+            double nuevoPrecio = Double.parseDouble(
+                    precio.getText().trim());
+
+            LocalDate nuevaFecha = LocalDate.parse(
+                    fecha.getText().trim());
+
+            if (nuevoNombre.isEmpty()
+                    || nuevaCategoria.isEmpty()
+                    || nuevaCantidad < 0
+                    || nuevoPrecio < 0) {
+
+                mostrarError(
+                        "Verifica los datos ingresados.");
+
+                return;
+            }
+
+            Alimento duplicado =
+                    inventario.buscar(nuevoNombre);
+
+            if (duplicado != null
+                    && !nuevoNombre.equalsIgnoreCase(
+                            nombreAnterior)) {
+
+                mostrarError(
+                        "Ya existe otro alimento con ese nombre.");
+
+                return;
+            }
+
+            inventario.eliminar(nombreAnterior);
+
+            alimento.setNombre(nuevoNombre);
+            alimento.setCategoria(nuevaCategoria);
+            alimento.setCantidad(nuevaCantidad);
+            alimento.setPrecio(nuevoPrecio);
+            alimento.setFechaCaducidad(nuevaFecha);
+
+            inventario.insertar(alimento);
+
+            historial.push(() -> {
+
+                inventario.eliminar(nuevoNombre);
+
+                alimento.setNombre(nombreAnterior);
+                alimento.setCategoria(categoriaAnterior);
+                alimento.setCantidad(cantidadAnterior);
+                alimento.setPrecio(precioAnterior);
+                alimento.setFechaCaducidad(fechaAnterior);
+
+                inventario.insertar(alimento);
+
+                reconstruirHeap();
+                actualizarTodo();
+            });
+
+            reconstruirHeap();
+            actualizarTodo();
+
+        } catch (NumberFormatException ex) {
+
+            mostrarError(
+                    "La cantidad debe ser un número entero y el precio debe ser numérico.");
+
+        } catch (DateTimeParseException ex) {
+
+            mostrarError(
+                    "La fecha debe tener el formato AAAA-MM-DD.");
+        }
+    }
+
+    private void eliminarAlimento() {
+
+        Alimento alimento = obtenerSeleccionado();
+
+        if (alimento == null) {
+
+            mostrarError(
+                    "Selecciona un alimento.");
+
+            return;
+        }
+
+        int confirmacion = JOptionPane.showConfirmDialog(
+                this,
+                "¿Eliminar "
+                        + alimento.getNombre()
+                        + " del inventario?",
+                "Confirmar eliminación",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        inventario.eliminar(alimento.getNombre());
+
+        historial.push(() -> {
+
+            inventario.insertar(alimento);
+            reconstruirHeap();
+            actualizarTodo();
+        });
+
+        reconstruirHeap();
+        actualizarTodo();
+    }
+
+    private Alimento obtenerSeleccionado() {
+
+        int fila = tabla.getSelectedRow();
+
+        if (fila < 0) {
+            return null;
+        }
+
+        fila = tabla.convertRowIndexToModel(fila);
+
+        String nombre = String.valueOf(
+                modeloTabla.getValueAt(fila, 0));
+
+        return inventario.buscar(nombre);
+    }
+
+    // ==========================================
+    // BÚSQUEDA Y TABLA
+    // ==========================================
+
+    private void actualizarTabla() {
+
+        modeloTabla.setRowCount(0);
+
+        String filtro = campoBusqueda.getText()
+                .trim().toLowerCase();
+
+        for (Alimento alimento :
+                inventario.obtenerAlimentos()) {
+
+            boolean coincide =
+                    alimento.getNombre()
+                            .toLowerCase().contains(filtro)
+                    || alimento.getCategoria()
+                            .toLowerCase().contains(filtro);
+
+            if (coincide) {
+                agregarFila(alimento);
+            }
+        }
+
+        tabla.repaint();
+    }
+
+    private void agregarFila(Alimento alimento) {
+
+        String estado;
+
+        if (alimento.estaCaducado()) {
+
+            estado = "Caducado";
+
+        } else if (alimento.estaPorCaducar()) {
+
+            estado = "Por caducar";
+
+        } else if (alimento.tienePocasUnidades()) {
+
+            estado = "Pocas unidades";
+
+        } else {
+
+            estado = "Vigente";
+        }
+
+        modeloTabla.addRow(new Object[] {
+            alimento.getNombre(),
+            alimento.getCategoria(),
+            alimento.getCantidad(),
+            String.format("$%.2f", alimento.getPrecio()),
+            alimento.calcularDescuento() + "%",
+            String.format(
+                    "$%.2f",
+                    alimento.calcularPrecioFinal()),
+            alimento.getFechaCaducidad(),
+            estado
+        });
+    }
+
+    private void configurarColoresTabla() {
+
+        DefaultTableCellRenderer renderizador =
+                new DefaultTableCellRenderer() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable tabla,
+                    Object valor,
+                    boolean seleccionado,
+                    boolean enfocado,
+                    int fila,
+                    int columna) {
+
+                Component componente =
+                        super.getTableCellRendererComponent(
+                                tabla,
+                                valor,
+                                seleccionado,
+                                enfocado,
+                                fila,
+                                columna);
+
+                if (seleccionado) {
+
+                    componente.setBackground(
+                            new Color(232, 225, 250));
+
+                    componente.setForeground(TEXTO);
+
+                } else {
+
+                    String estado = String.valueOf(
+                            tabla.getModel().getValueAt(
+                                    fila, 7));
+
+                    if (estado.equals("Caducado")) {
+
+                        componente.setBackground(
+                                new Color(255, 225, 229));
+
+                    } else if (estado.equals("Por caducar")) {
+
+                        componente.setBackground(
+                                new Color(255, 243, 215));
+
+                    } else if (estado.equals(
+                            "Pocas unidades")) {
+
+                        componente.setBackground(
+                                new Color(255, 249, 225));
+
+                    } else {
+
+                        componente.setBackground(
+                                Color.WHITE);
+                    }
+
+                    componente.setForeground(TEXTO);
+                }
+
+                setBorder(
+                        new EmptyBorder(0, 9, 0, 9));
+
+                return componente;
+            }
+        };
+
+        for (int i = 0;
+                i < tabla.getColumnCount(); i++) {
+
+            tabla.getColumnModel()
+                    .getColumn(i)
+                    .setCellRenderer(renderizador);
+        }
+    }
+
+    // ==========================================
+    // OPERACIONES DE LA LISTA DE COMPRAS
+    // ==========================================
+
+    private void agregarSeleccionadoACompras() {
+
+        Alimento alimento = obtenerSeleccionado();
+
+        if (alimento == null) {
+
+            mostrarError(
+                    "Selecciona un alimento.");
+
+            return;
+        }
+
+        boolean agregado =
+                compras.agregar(alimento.getNombre());
+
+        if (!agregado) {
+
+            mostrarError(
+                    "El producto ya está en la lista.");
+        }
+
+        actualizarListaCompras();
+    }
+
+    private void agregarCompraManual() {
+
+        String nombre = JOptionPane.showInputDialog(
+                this,
+                "Nombre del producto:",
+                "Agregar producto a la lista",
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (nombre == null
+                || nombre.trim().isEmpty()) {
+
+            return;
+        }
+
+        if (!compras.agregar(nombre.trim())) {
+
+            mostrarError(
+                    "El producto ya existe en la lista.");
+        }
+
+        actualizarListaCompras();
+    }
+
+    // Obtiene el nombre sin el indicador de estado.
+
+    private String extraerNombreCompra(String texto) {
+
+        return texto.replaceFirst(
+                "^\\[(COMPRADO|PENDIENTE)\\]\\s*", "");
+    }
+
+    private String obtenerNombreCompra() {
+
+        String seleccionado =
+                listaCompras.getSelectedValue();
+
+        if (seleccionado == null) {
+            return null;
+        }
+
+        return extraerNombreCompra(seleccionado);
+    }
+
+    // Cambia el estado de un producto.
+
+    private void cambiarEstadoCompra() {
+
+        String nombre = obtenerNombreCompra();
+
+        if (nombre == null) {
+
+            mostrarError(
+                    "Selecciona un producto.");
+
+            return;
+        }
+
+        String seleccionado =
+                listaCompras.getSelectedValue();
+
+        if (seleccionado.startsWith("[COMPRADO]")) {
+
+            compras.destachar(nombre);
+
+        } else {
+
+            compras.tachar(nombre);
+        }
+
+        actualizarListaCompras();
+    }
+
+    private void eliminarDeCompras() {
+
+        String nombre = obtenerNombreCompra();
+
+        if (nombre == null) {
+
+            mostrarError(
+                    "Selecciona un producto.");
+
+            return;
+        }
+
+        compras.eliminar(nombre);
+        actualizarListaCompras();
+    }
+
+    // Actualiza la lista y calcula gastos y ahorros.
+
+    private void actualizarListaCompras() {
+
+        modeloCompras.clear();
+
+        double totalComprado = 0;
+        double ahorroTotal = 0;
+
+        for (String compra : compras.obtenerTodos()) {
+
+            modeloCompras.addElement(compra);
+
+            boolean comprado =
+                    compra.startsWith("[COMPRADO]");
+
+            // Solo se consideran productos marcados.
+
+            if (!comprado) {
+                continue;
+            }
+
+            String nombre = extraerNombreCompra(compra);
+
+            Alimento alimento = inventario.buscar(nombre);
+
+            // Los productos manuales sin precio
+            // no se incluyen en los cálculos.
+
+            if (alimento == null) {
+                continue;
+            }
+
+            double precioOriginal = alimento.getPrecio();
+
+            double precioFinal =
+                    alimento.calcularPrecioFinal();
+
+            double ahorro =
+                    precioOriginal - precioFinal;
+
+            totalComprado += precioFinal;
+            ahorroTotal += ahorro;
+        }
+
+        lblTotalComprado.setText(
+                String.format("$%.2f", totalComprado));
+
+        lblAhorroCompras.setText(
+                String.format("$%.2f", ahorroTotal));
+
+        lblCompras.setText(
+                "Productos pendientes: "
+                + compras.cantidadPendientes()
+                + "   |   Productos comprados: "
+                + compras.cantidadComprados());
+
+        listaCompras.revalidate();
+        listaCompras.repaint();
+    }
+
+    // ==========================================
+    // HISTORIAL DE ACCIONES
+    // ==========================================
+
+    private void deshacerAccion() {
+
+        Runnable accion = historial.pop();
+
+        if (accion == null) {
+
+            mostrarError(
+                    "No hay acciones para deshacer.");
+
+            return;
+        }
+
+        accion.run();
+
+        JOptionPane.showMessageDialog(
+                this,
+                "La última acción fue deshecha.",
+                "FreshStock",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // ==========================================
+    // ACTUALIZACIÓN GENERAL
+    // ==========================================
+
+    private void reconstruirHeap() {
+
+        caducidades.limpiar();
+
+        for (Alimento alimento :
+                inventario.obtenerAlimentos()) {
+
+            caducidades.insertar(alimento);
+        }
+    }
+
+    private void actualizarIndicadores() {
+
+        List<Alimento> alimentos =
+                inventario.obtenerAlimentos();
+
+        int unidades = 0;
+        int alertas = 0;
+        int caducados = 0;
+
+        for (Alimento alimento : alimentos) {
+
+            unidades += alimento.getCantidad();
+
+            if (alimento.estaCaducado()) {
+
+                caducados++;
+
+            } else if (alimento.estaPorCaducar()) {
+
+                alertas++;
+            }
+        }
+
+        lblProductos.setText(
+                String.valueOf(alimentos.size()));
+
+        lblUnidades.setText(
+                String.valueOf(unidades));
+
+        lblAlertas.setText(
+                String.valueOf(alertas));
+
+        lblCaducados.setText(
+                String.valueOf(caducados));
+
+        actualizarProximoAlimento();
+    }
+
+    private void actualizarProximoAlimento() {
+
+        if (lblProximo == null) {
+            return;
+        }
+
+        Alimento proximo =
+                caducidades.obtenerProximoACaducar();
+
+        if (proximo == null) {
+
+            lblProximo.setText(
+                    "No hay alimentos registrados.");
+
+        } else {
+
+            long dias = proximo.diasParaCaducar();
+
+            String estado;
+
+            if (dias < 0) {
+
+                estado = "Caducó hace "
+                        + Math.abs(dias) + " días";
+
+            } else if (dias == 0) {
+
+                estado = "Caduca hoy";
+
+            } else {
+
+                estado = "Caduca en "
+                        + dias + " días";
+            }
+
+            lblProximo.setText(
+                    proximo.getNombre()
+                    + " — "
+                    + estado
+                    + " ("
+                    + proximo.getFechaCaducidad()
+                    + ")");
+        }
+    }
+
+    private void actualizarTodo() {
+
+        actualizarTabla();
+        actualizarListaCompras();
+        actualizarCaducidades();
+        actualizarIndicadores();
+        actualizarOfertas();
+    }
+
+    // ==========================================
+    // DATOS DE DEMOSTRACIÓN
+    // ==========================================
+
+    private void cargarDatosIniciales() {
+
+        inventario.insertar(new Alimento(
+                "Leche",
+                "Lácteos",
+                12,
+                32.50,
+                LocalDate.now().plusDays(2)));
+
+        inventario.insertar(new Alimento(
+                "Manzanas",
+                "Frutas",
+                20,
+                45.00,
+                LocalDate.now().plusDays(10)));
+
+        inventario.insertar(new Alimento(
+                "Yogur",
+                "Lácteos",
+                4,
+                18.50,
+                LocalDate.now().minusDays(1)));
+
+        inventario.insertar(new Alimento(
+                "Pan",
+                "Panadería",
+                2,
+                25.00,
+                LocalDate.now().plusDays(1)));
+
+        inventario.insertar(new Alimento(
+                "Arroz",
+                "Granos",
+                15,
+                38.00,
+                LocalDate.now().plusDays(120)));
+
+        reconstruirHeap();
+    }
+
+    // ==========================================
+    // MENSAJES
+    // ==========================================
+
+    private void mostrarError(String mensaje) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                mensaje,
+                "FreshStock",
+                JOptionPane.WARNING_MESSAGE);
+    }
+
+    // ==========================================
+    // INICIO DEL PROGRAMA
+    // ==========================================
+
+    public static void main(String[] args) {
+
+        try {
+
+            UIManager.setLookAndFeel(
+                    UIManager.getSystemLookAndFeelClassName());
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "No se pudo aplicar el estilo del sistema.");
+        }
+
+        SwingUtilities.invokeLater(() -> {
+
+            Main ventana = new Main();
+            ventana.setVisible(true);
+
+        });
+    }
+}
+
